@@ -1,0 +1,14 @@
+[package]
+name = "world_gen"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+noise = { version = "0.8.2", features = ["images"] }
+rand = "0.8.5"
+colored = "2.0.0"
+image = "0.24.0"
+bluenoise = "0.2.1"
+rand_pcg = "0.3.1"
