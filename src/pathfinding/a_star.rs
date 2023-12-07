@@ -1,6 +1,10 @@
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
+use std::iter::Rev;
+use priority_queue::PriorityQueue;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 
 pub trait Walkable {
     fn cost(&self) -> u32;
@@ -161,6 +165,7 @@ where
 
         }
     }
+
     let mut path: Vec<Point> = Vec::new();
     let mut current = end;
     while current != start {
@@ -171,9 +176,74 @@ where
             return Err("Invalid Path :(".to_string());
         }
     }
-
+    println!("cost sum : {}", path.iter().fold(0,|x,p| x+node_map[p.x][p.y].f_cost()));
 
     Ok(path)
+}
+pub fn shortest_priority<T>(map: &Vec<Vec<T>>, start: Point, end: Point) -> Result<Vec<Point>, String>
+    where
+        T: Walkable,
+{
+    //check if path gets out of bounds
+    if map.len() == 0 || map[0].len()==0 {
+        return Err("Invalid Map".to_string())
+    }
+    let (width,height) = (map.len(),map[0].len());
+    if !(0 <= start.x && start.x < width && 0 <=start.y && start.y < height){
+        return Err("Out of bounds".to_string());
+    }
+    //initializes the node map with the coordinates and default values
+    let mut node_map: Vec<Vec<Node>> = map.iter().enumerate().map(|(col,v)|
+        v.iter().enumerate().map(|(row,w)| Node::init(Point::new(col,row), w.cost(),end)  ).collect()).collect();
+    node_map[start.x][start.y] = Node::new(start,0,0,0);
+
+    //the frontier of the pathfinding algorithm
+    let mut open_list = OpenList::new();
+
+    //nodes already verified
+    let mut closed_list = HashSet::<Point>::new();
+    //add start to open list
+    open_list.add(start,&node_map);
+
+    loop{
+        //gets point with smallest f_cost
+        let current = open_list.min();
+        closed_list.insert(current);
+        if current == end{
+            break;
+        }
+
+        for i in neighbours(current,width,height).iter(){
+            if closed_list.contains(i){
+                continue;
+            }
+            if !open_list.contains(i) || node_map[i.x][i.y].g_cost() >node_map[start.x][start.y].g_cost() + node_map[i.x][i.y].weight {
+                let parent_cost = node_map[start.x][start.y].g_cost();
+
+                node_map[i.x][i.y].connect(current,parent_cost);
+
+                open_list.add(i.clone(),&node_map);
+
+
+            }
+
+
+        }
+    }
+    let mut path: Vec<Point> = Vec::new();
+    let mut current = end;
+    while current != start {
+        path.push(current);
+        if let Some(p) = node_map[current.x][current.y].parent{
+            current = p;
+        }else {
+            return Err("Invalid Path :(".to_string());
+        }
+    }
+    println!("cost sum : {}", path.iter().fold(0,|x,p| x+node_map[p.x][p.y].f_cost()));
+
+    Ok(path)
+
 }
 //refactorare un sacco, togliere sti unwrap
 fn take_min(map: &mut HashSet<Point>, node_map: &Vec<Vec<Node>>) ->Point{
@@ -201,6 +271,7 @@ fn neighbours( coords:Point,width:usize,height:usize)-> Vec<Point> {
     if coords.y < height-1{
         vec.push(Point::new(coords.x,coords.y+1))
     }
+    vec.shuffle(&mut thread_rng());
     vec
 }
 #[test]
@@ -211,5 +282,29 @@ fn test(){
 impl Walkable for u32{
     fn cost(&self) -> u32 {
         *self
+    }
+}
+//wrapper for priority queue
+pub struct OpenList {
+    pq: PriorityQueue<Point,Reverse<u32>>
+}
+impl OpenList{
+    fn new() -> Self{
+        Self {
+            pq: PriorityQueue::new()
+        }
+    }
+    fn min(&mut self) -> Point {
+        self.pq.pop().map(|(a,b)| a).unwrap()
+    }
+    fn add(&mut self, item: Point,map: &Vec<Vec<Node>>){
+        if self.contains(&item){
+            self.pq.change_priority(&item,Reverse(map[item.x][item.y].f_cost()));
+        }else{
+            self.pq.push(item, Reverse(map[item.x][item.y].f_cost()));
+        }
+    }
+    fn contains( &self, item: &Point)-> bool{
+    self.pq.get(item).map_or_else(|| false, |_| true)
     }
 }

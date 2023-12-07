@@ -5,6 +5,6 @@ mod world_gen;
 mod pathfinding;
 
 fn main() {
-    let world = gen_world(200, 200);
+    let world = gen_world(1500, 1500);
     export_to_image(&world, "map.png")
 }

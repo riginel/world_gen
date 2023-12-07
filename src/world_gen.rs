@@ -4,6 +4,7 @@ use noise::utils::{NoiseMapBuilder, PlaneMapBuilder};
 
 
 use std::cmp;
+use std::time::Instant;
 use noise::*;
 use rand::prelude::*;
 use image::{Rgb, RgbImage};
@@ -89,7 +90,7 @@ fn bfs(world: &mut Vec<Vec<Tile>>, id: usize, point: (usize, usize)) -> Vec<(usi
 }
 
 pub fn gen_world(width: usize, height: usize) -> Vec<Vec<Tile>> {
-    let seed = rand::random::<u32>();
+    let seed = /*rand::random::<u32>()*/ 52;
     let perlin = Perlin::new(seed);
     let scale = 4.2; // TODO adjust automatically based on map size.
     // scale rappresent zoom factor of the map,
@@ -166,13 +167,16 @@ pub fn gen_world(width: usize, height: usize) -> Vec<Vec<Tile>> {
     }
 
     //pathfinding test
-    let road = shortest_path(&world, Point::new(20,20),Point::new(125,125));
+    let start = Instant::now();
+    let road = shortest_priority(&world, Point::new(20,20),Point::new(1000,1000));
     match road {
         Ok(path) => { for i in path {
             world[i.x][i.y] = Tile::Road
         }}
         Err(s) => {println!("{}",s)}
     }
+    let duration = start.elapsed();
+    println!("{:?}",duration);
     /*
     let road = shortest_path(&world, Point::new(190,190),Point::new(20,20));
     match road {
