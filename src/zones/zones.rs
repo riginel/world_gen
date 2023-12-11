@@ -1,26 +1,26 @@
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use crate::pathfinding::a_star::{build_road, Point, shortest_priority};
-use crate::tile::Tile;
+use crate::tile::_TileType;
 
 pub struct Zone{
-    pub tile:Tile,
+    pub tile: _TileType,
     pub inner: Vec<Point>,
     pub centroid: Point
 }
 impl Zone{
-    fn bfs(world: &mut Vec<Vec<Tile>>, id: usize, point: Point) -> Self{
+    fn bfs(world: &mut Vec<Vec<_TileType>>, id: usize, point: Point) -> Self{
         let mut vec = Vec::<Point>::new();
         let mut stack = Vec::<Point>::new();
         stack.push(point);
         while let Some(p) = stack.pop(){
             let (x,y) = p.as_tuple();
             match world[x][y] {
-                Tile::Zone(i) =>{
+                _TileType::Zone(i) =>{
                     if i == id {
                         vec.push(p);
                         stack.append(&mut p.neighbours(world.len(),world[0].len()));
-                        world[x][y] = Tile::None;
+                        world[x][y] = _TileType::None;
                     }
                 }
                 _=>{}
@@ -28,7 +28,7 @@ impl Zone{
         }
         let mut  centroid = Self::compute_centroid(&vec);
         Zone {
-            tile:Tile::None,
+            tile: _TileType::None,
             inner: vec,
             centroid
         }
@@ -41,7 +41,7 @@ impl Zone{
         Point::new(centroid.x / points.len(), centroid.y / points.len())
     }
 
-    pub fn fill(&mut self, world: &mut Vec<Vec<Tile>>,tile:Tile){
+    pub fn fill(&mut self, world: &mut Vec<Vec<_TileType>>, tile: _TileType){
         self.tile = tile;
         for i in self.inner.iter(){
             world[i.x][i.y] = tile;
@@ -60,7 +60,7 @@ pub struct Zones{
 }
 
 impl Zones {
-    pub fn get_zones(world: &mut Vec<Vec<Tile>>)->Self {
+    pub fn get_zones(world: &mut Vec<Vec<_TileType>>) ->Self {
         let mut zones = Zones {
             coasts: vec![],
             cities: vec![],
@@ -71,10 +71,10 @@ impl Zones {
             for y in 0..world[0].len(){
                 match world[x][y]{
 
-                    Tile::Zone(0) => {
+                    _TileType::Zone(0) => {
                         zones.coasts.push(Zone::bfs(world,0,Point::new(x,y)))
                     },
-                    Tile::Zone(1)=>{
+                    _TileType::Zone(1)=>{
                         zones.mountains.push(Mountain::new(world,Point::new(x,y)))
                     }
                     _ => {}
@@ -99,25 +99,25 @@ impl Zones {
         zones
 
     }
-    fn fill(&mut self, world: &mut Vec<Vec<Tile>>){
+    fn fill(&mut self, world: &mut Vec<Vec<_TileType>>){
         let mut rng = thread_rng();
         //filling the coasts with either grass or sand
         for i in self.coasts.iter_mut(){
-            let tile = *[Tile::Sand, Tile::Grass].choose(&mut rng).unwrap();
+            let tile = *[_TileType::Sand, _TileType::Grass].choose(&mut rng).unwrap();
             i.fill(world,tile);
         }
 
         for i in self.mountains.iter_mut(){
-            i.lava_pools.iter_mut().for_each(|z| z.fill(world,Tile::Lava));
-            i.zone.fill(world,Tile::Mountain)
+            i.lava_pools.iter_mut().for_each(|z| z.fill(world, _TileType::Lava));
+            i.zone.fill(world, _TileType::Mountain)
         }
         for i in self.cities.iter_mut(){
-            i.fill(world, Tile::Hill);
+            i.fill(world, _TileType::Hill);
         }
 
 
     }
-    fn connect_cities(&mut self, world: &mut Vec<Vec<Tile>>){
+    fn connect_cities(&mut self, world: &mut Vec<Vec<_TileType>>){
         /*
         for (index, first_zone) in self.cities.iter().enumerate(){
             for second_zone in self.cities[index.. ].iter(){
@@ -166,7 +166,7 @@ pub struct Mountain{
     lava_pools: Vec<Zone>
 }
 impl Mountain{
-    fn new(world: &mut Vec<Vec<Tile>>, point: Point) -> Self{
+    fn new(world: &mut Vec<Vec<_TileType>>, point: Point) -> Self{
         let mut zone_vec = Vec::<Point>::new();
         let mut lava_pool_vec = Vec::<Zone>::new();
         let mut stack = Vec::<Point>::new();
@@ -175,14 +175,14 @@ impl Mountain{
         while let Some(p) = stack.pop(){
             let (x,y) = p.as_tuple();
             match world[x][y] {
-                Tile::Zone(1) =>{
+                _TileType::Zone(1) =>{
 
                         zone_vec.push(p);
                         stack.append(&mut p.neighbours(world.len(),world[0].len()));
-                        world[x][y] = Tile::None;
+                        world[x][y] = _TileType::None;
 
                 }
-                Tile::Zone(2)=>{
+                _TileType::Zone(2)=>{
 
                     lava_pool_vec.push(Zone::bfs(world,2,p));
                 }
@@ -192,7 +192,7 @@ impl Mountain{
         let centroid = Zone::compute_centroid(&zone_vec);
         Self{
             zone: Zone{
-                tile: Tile::None,
+                tile: _TileType::None,
                 inner: zone_vec,
                 centroid
             },
@@ -208,7 +208,7 @@ impl Mountain{
         }
 
         Zone{
-            tile: Tile::None,
+            tile: _TileType::None,
             centroid: Zone::compute_centroid(&vec),
             inner: vec
         }

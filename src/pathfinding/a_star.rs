@@ -7,7 +7,7 @@ use noise::core::worley::distance_functions::euclidean;
 use priority_queue::PriorityQueue;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
-use crate::tile::Tile;
+use crate::tile::_TileType;
 
 pub trait Walkable {
     fn cost(&self) -> u32;
@@ -268,9 +268,9 @@ fn take_min(map: &mut HashSet<Point>, node_map: &Vec<Vec<Node>>) ->Point{
     map.remove(&min);
     min
 }
-pub fn build_road(world:&mut Vec<Vec<Tile>>, path: Vec<Point>){
+pub fn build_road(world:&mut Vec<Vec<_TileType>>, path: Vec<Point>){
     for i in path {
-        world[i.x][i.y] = Tile::Road;
+        world[i.x][i.y] = _TileType::Road;
     }
 
 }

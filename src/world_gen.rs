@@ -8,19 +8,17 @@ use std::time::Instant;
 use noise::*;
 use rand::prelude::*;
 use image::{Rgb, RgbImage};
+use rand::distributions::Uniform;
 use rand::seq::SliceRandom;
 
 use crate::pathfinding::a_star::*;
 use crate::tile::*;
 use crate::zones::zones::Zones;
+use robotics_lib::world::tile::Content;
+use crate::content_distributions::ContentDist;
 
 
-
-
-
-
-
-pub fn gen_world(width: usize, height: usize) -> Vec<Vec<Tile>> {
+pub fn gen_world(width: usize, height: usize) -> PreWorld {
     let seed = rand::random::<u32>() ;
     let perlin = Perlin::new(seed);
     let scale = 4.2; // TODO adjust automatically based on map size.
@@ -111,7 +109,23 @@ pub fn gen_world(width: usize, height: usize) -> Vec<Vec<Tile>> {
     println!("{:?}",duration);
     */
     let zones = Zones::get_zones(&mut world);
-    world
+    let content_distribution: ContentDist = ContentDist::default();
+    let mut content_vec = Vec::<Vec<Content>>::with_capacity(width);
+    let mut range_generator = Uniform::new(0,100);
+    for i in 0..width{
+        content_vec.push(Vec::with_capacity(height));
+        for j in 0..height{
+            content_vec[i].push(content_distribution.get_content(world[i][j],range_generator.sample(&mut rand::thread_rng())))
+        }
+    }
+    PreWorld{
+        size: Point::new(width,height),
+
+        tiles: world,
+        contents: content_vec,
+        elevation: vec![],
+    }
+
 
 }
 
