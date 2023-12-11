@@ -1,10 +1,13 @@
 use std::cmp::{Ordering, Reverse};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-use std::iter::Rev;
+use std::iter::{Rev, Sum};
+use std::ops;
+use noise::core::worley::distance_functions::euclidean;
 use priority_queue::PriorityQueue;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use crate::tile::Tile;
 
 pub trait Walkable {
     fn cost(&self) -> u32;
@@ -22,8 +25,15 @@ impl Point {
         (self.x, self.y)
     }
     pub fn as_i32_tuple(&self) -> (i32,i32) {(self.x as i32, self.y as i32)}
-    fn manhattan_distance(&self, other: Self) ->u32 {
+    pub fn manhattan_distance(&self, other: Self) ->u32 {
+
         (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as u32
+
+    }
+    fn euclidean(&self, other:Self)->u32{
+        let dx = self.x.abs_diff(other.x) as f64;
+        let dy = self.y.abs_diff(other.y) as f64;
+        (dx * dx + dy * dy).sqrt().floor() as u32
     }
     pub fn neighbours(&self, width:usize,height:usize)->Vec<Point>{
         let mut vec: Vec<Point> = Vec::with_capacity(4);
@@ -44,6 +54,13 @@ impl Point {
             vec.push(Point::new(self.x,self.y+1))
         }
         vec
+    }
+}
+impl ops::Add for Point {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Point::new(self.x + rhs.x, self.y + rhs.y)
     }
 }
 #[derive(Debug)]
@@ -67,7 +84,7 @@ impl Node {
             parent:None,
             g,
             h,
-            weight
+            weight: weight
         }
     }
     //function used to initialize a node to a default value
@@ -77,12 +94,12 @@ impl Node {
             parent:None,
             g: 1000000,
             h: coords.manhattan_distance(end),
-            weight
+            weight:weight*10
         }
     }
 
     fn f_cost(&self) -> u32{
-        self.g_cost() + self.h
+        self.g_cost()+self.h
     }
     //function that connects the Node to a parent,
     fn connect(&mut self, parent: Point, parent_cost: u32,){
@@ -149,7 +166,7 @@ where
         }
 
         for i in neighbours(current,width,height).iter(){
-            if closed_list.contains(i){
+            if closed_list.contains(i) {
                 continue;
             }
             if !open_list.contains(i) || node_map[i.x][i.y].g_cost() >node_map[start.x][start.y].g_cost() + node_map[i.x][i.y].weight {
@@ -214,7 +231,7 @@ pub fn shortest_priority<T>(map: &Vec<Vec<T>>, start: Point, end: Point) -> Resu
         }
 
         for i in neighbours(current,width,height).iter(){
-            if closed_list.contains(i){
+            if closed_list.contains(i)&& node_map[i.x][i.y].g_cost()<= node_map[start.x][start.y].g_cost()+ node_map[i.x][i.y].weight{
                 continue;
             }
             if !open_list.contains(i) || node_map[i.x][i.y].g_cost() >node_map[start.x][start.y].g_cost() + node_map[i.x][i.y].weight {
@@ -251,7 +268,12 @@ fn take_min(map: &mut HashSet<Point>, node_map: &Vec<Vec<Node>>) ->Point{
     map.remove(&min);
     min
 }
+pub fn build_road(world:&mut Vec<Vec<Tile>>, path: Vec<Point>){
+    for i in path {
+        world[i.x][i.y] = Tile::Road;
+    }
 
+}
 
 fn neighbours( coords:Point,width:usize,height:usize)-> Vec<Point> {
     let mut vec: Vec<Point> = Vec::with_capacity(4);
