@@ -1,24 +1,17 @@
 use image::{Rgb, RgbImage};
-use robotics_lib::world::tile::Content;
-use crate::tile::{_TileType, color_for_tile, PreWorld};
+use robotics_lib::world::tile::{Content, Tile, TileType};
+use crate::world_gen::PreWorld;
 
 pub fn export_to_image(map: &PreWorld, filename: &str) {
-    let (width,height) = map.size.as_tuple();
+    let (width,height) = (map.size,map.size);
 
 
     let mut image = RgbImage::new(width as u32, height as u32);
 
     for x in 0..width {
         for y in 0..height {
-            let tile_color = color_for_tile(map.tiles[x][y]);
-            let content_color = color_for_content(&map.contents[x][y]);
-            if let Some(content_color) = content_color{
-                image.put_pixel(x as u32, y as u32, content_color);
-            }else {
-                image.put_pixel(x as u32, y as u32, tile_color);
-            }
-
-
+            let tile_color = color_for_tile(&map.tiles[x][y]);
+            image.put_pixel(x as u32, y as u32, tile_color);
         }
     }
 
@@ -43,5 +36,29 @@ fn color_for_content(content:&Content)-> Option<Rgb<u8>>{
         Content::JollyBlock(_) => {None}
         Content::Scarecrow => {None}
         Content::None =>None
+    }
+}
+
+pub fn color_for_tiletype(tile: &TileType) -> Rgb<u8> {
+    // TODO Adjust colors
+    match tile {
+        TileType::DeepWater => Rgb([0,0,125]),
+        TileType::Grass => Rgb([124,252,0]),
+        TileType::Sand => Rgb([246,215,176]),
+        TileType::ShallowWater => Rgb([35,137,218]),
+        TileType::Mountain => Rgb([90, 75, 65]),
+        TileType::Lava => Rgb([207, 16, 32]),
+
+        TileType::Street => Rgb([50,50,50]),
+        TileType::Hill => Rgb([0,153,51]),
+        _ => Rgb([0,0,0]),
+    }
+}
+pub fn color_for_tile(tile:&Tile)->Rgb<u8>{
+    let tiletype_color = color_for_tiletype(&tile.tile_type);
+    let content_color = color_for_content(&tile.content);
+    match content_color{
+        None => {tiletype_color}
+        Some(color) => {color}
     }
 }

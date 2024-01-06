@@ -1,26 +1,30 @@
+use rand::distributions::{Distribution, Uniform};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
-use crate::pathfinding::a_star::{build_road, Point, shortest_priority};
-use crate::tile::_TileType;
+use robotics_lib::world::tile::{Content, TileType};
+use crate::customization::content_distribution::CityContentDist;
+use crate::pathfinding::a_star::{build_road, shortest_priority};
+use crate::utils::tile::PreTileType;
+use crate::utils::vector2::Vector2;
 
 pub struct Zone{
-    pub tile: _TileType,
-    pub inner: Vec<Point>,
-    pub centroid: Point
+    pub tile: PreTileType,
+    pub inner: Vec<Vector2>,
+    pub centroid: Vector2
 }
 impl Zone{
-    fn bfs(world: &mut Vec<Vec<_TileType>>, id: usize, point: Point) -> Self{
-        let mut vec = Vec::<Point>::new();
-        let mut stack = Vec::<Point>::new();
+    fn bfs(world: &mut Vec<Vec<PreTileType>>, id: usize, point: Vector2) -> Self{
+        let mut vec = Vec::<Vector2>::new();
+        let mut stack = Vec::<Vector2>::new();
         stack.push(point);
         while let Some(p) = stack.pop(){
             let (x,y) = p.as_tuple();
             match world[x][y] {
-                _TileType::Zone(i) =>{
+                PreTileType::Zone(i) =>{
                     if i == id {
                         vec.push(p);
                         stack.append(&mut p.neighbours(world.len(),world[0].len()));
-                        world[x][y] = _TileType::None;
+                        world[x][y] = PreTileType::None;
                     }
                 }
                 _=>{}
@@ -28,20 +32,20 @@ impl Zone{
         }
         let mut  centroid = Self::compute_centroid(&vec);
         Zone {
-            tile: _TileType::None,
+            tile: PreTileType::None,
             inner: vec,
             centroid
         }
     }
-    fn compute_centroid(points: &Vec<Point>) -> Point{
+    fn compute_centroid(points: &Vec<Vector2>) -> Vector2 {
         if points.len()== 0{
             println!("error!!")
         }
-        let mut  centroid :Point = points.iter().fold(Point::new(0,0),|acc,p| acc + *p);
-        Point::new(centroid.x / points.len(), centroid.y / points.len())
+        let mut  centroid : Vector2 = points.iter().fold(Vector2::new(0, 0), |acc, p| acc + *p);
+        Vector2::new(centroid.x / points.len(), centroid.y / points.len())
     }
 
-    pub fn fill(&mut self, world: &mut Vec<Vec<_TileType>>, tile: _TileType){
+    pub fn fill(&mut self, world: &mut Vec<Vec<PreTileType>>, tile: PreTileType){
         self.tile = tile;
         for i in self.inner.iter(){
             world[i.x][i.y] = tile;
@@ -55,15 +59,16 @@ impl Zone{
 pub struct Zones{
     coasts: Vec<Zone>,
     cities: Vec<Zone>,
-    //            rock,     lava
+    hills:Vec<Zone>,
     mountains: Vec<Mountain>
 }
 
 impl Zones {
-    pub fn get_zones(world: &mut Vec<Vec<_TileType>>) ->Self {
+    pub fn get_zones(world: &mut Vec<Vec<PreTileType>>) ->Self {
         let mut zones = Zones {
             coasts: vec![],
             cities: vec![],
+            hills:vec![],
             mountains: vec![]
         };
         //scrolls the world and finds zones, either coasts or mountains
@@ -71,11 +76,11 @@ impl Zones {
             for y in 0..world[0].len(){
                 match world[x][y]{
 
-                    _TileType::Zone(0) => {
-                        zones.coasts.push(Zone::bfs(world,0,Point::new(x,y)))
+                    PreTileType::Zone(0) => {
+                        zones.coasts.push(Zone::bfs(world, 0, Vector2::new(x, y)))
                     },
-                    _TileType::Zone(1)=>{
-                        zones.mountains.push(Mountain::new(world,Point::new(x,y)))
+                    PreTileType::Zone(1)=>{
+                        zones.mountains.push(Mountain::new(world, Vector2::new(x, y)))
                     }
                     _ => {}
                 }
@@ -83,8 +88,12 @@ impl Zones {
         }
         //convert some mountains in cities
         zones.mountains.shuffle(&mut rand::thread_rng());
-        for i in 0..zones.mountains.len()/2{
+        for i in 0..(zones.mountains.len()*2)/3{
             zones.cities.push(zones.mountains.pop().unwrap().to_city());
+        }
+        //convert some cities in hills
+        for i in 0..zones.cities.len()/2{
+            zones.hills.push(zones.cities.pop().unwrap());
         }
 
         /*
@@ -99,25 +108,28 @@ impl Zones {
         zones
 
     }
-    fn fill(&mut self, world: &mut Vec<Vec<_TileType>>){
+    fn fill(&mut self, world: &mut Vec<Vec<PreTileType>>){
         let mut rng = thread_rng();
         //filling the coasts with either grass or sand
         for i in self.coasts.iter_mut(){
-            let tile = *[_TileType::Sand, _TileType::Grass].choose(&mut rng).unwrap();
+            let tile = *[PreTileType::Sand, PreTileType::Grass].choose(&mut rng).unwrap();
             i.fill(world,tile);
         }
 
         for i in self.mountains.iter_mut(){
-            i.lava_pools.iter_mut().for_each(|z| z.fill(world, _TileType::Lava));
-            i.zone.fill(world, _TileType::Mountain)
+            i.lava_pools.iter_mut().for_each(|z| z.fill(world, PreTileType::Lava));
+            i.zone.fill(world, PreTileType::Mountain)
         }
         for i in self.cities.iter_mut(){
-            i.fill(world, _TileType::Hill);
+            i.fill(world, PreTileType::Grass);
+        }
+        for i in self.hills.iter_mut(){
+            i.fill(world, PreTileType::Hill);
         }
 
 
     }
-    fn connect_cities(&mut self, world: &mut Vec<Vec<_TileType>>){
+    fn connect_cities(&mut self, world: &mut Vec<Vec<PreTileType>>){
         /*
         for (index, first_zone) in self.cities.iter().enumerate(){
             for second_zone in self.cities[index.. ].iter(){
@@ -160,29 +172,41 @@ impl Zones {
             }
         }
     }
+    pub fn fill_cities_with_content(&self ,world: &mut Vec<Vec<TileType>>,content_vec:&mut Vec<Vec<Content>>,city_content_dist:&CityContentDist){
+        let mut rng = thread_rng();
+        let mut range_generator = Uniform::new(0,100);
+
+        for i in self.cities.iter(){
+            for point in i.inner.iter(){
+                if world[point.x][point.y] == TileType::Grass{
+                    content_vec[point.x][point.y] = city_content_dist.get_content(range_generator.sample(&mut rng));
+                }
+            }
+        }
+    }
 }
 pub struct Mountain{
     zone:Zone,
     lava_pools: Vec<Zone>
 }
 impl Mountain{
-    fn new(world: &mut Vec<Vec<_TileType>>, point: Point) -> Self{
-        let mut zone_vec = Vec::<Point>::new();
+    fn new(world: &mut Vec<Vec<PreTileType>>, point: Vector2) -> Self{
+        let mut zone_vec = Vec::<Vector2>::new();
         let mut lava_pool_vec = Vec::<Zone>::new();
-        let mut stack = Vec::<Point>::new();
+        let mut stack = Vec::<Vector2>::new();
 
         stack.push(point);
         while let Some(p) = stack.pop(){
             let (x,y) = p.as_tuple();
             match world[x][y] {
-                _TileType::Zone(1) =>{
+                PreTileType::Zone(1) =>{
 
                         zone_vec.push(p);
                         stack.append(&mut p.neighbours(world.len(),world[0].len()));
-                        world[x][y] = _TileType::None;
+                        world[x][y] = PreTileType::None;
 
                 }
-                _TileType::Zone(2)=>{
+                PreTileType::Zone(2)=>{
 
                     lava_pool_vec.push(Zone::bfs(world,2,p));
                 }
@@ -192,7 +216,7 @@ impl Mountain{
         let centroid = Zone::compute_centroid(&zone_vec);
         Self{
             zone: Zone{
-                tile: _TileType::None,
+                tile: PreTileType::None,
                 inner: zone_vec,
                 centroid
             },
@@ -204,11 +228,11 @@ impl Mountain{
         let mut vec = Vec::new();
         vec.append(&mut self.zone.inner);
         for i in self.lava_pools.iter_mut(){
-            vec.append(&mut i.inner)
+            vec.append(&mut i.inner);
         }
 
         Zone{
-            tile: _TileType::None,
+            tile: PreTileType::None,
             centroid: Zone::compute_centroid(&vec),
             inner: vec
         }

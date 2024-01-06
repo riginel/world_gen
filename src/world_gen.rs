@@ -1,132 +1,74 @@
-use noise::{Abs, Add, Constant, Displace, Fbm, Multiply, NoiseFn, OpenSimplex, Perlin, PerlinSurflet, ScaleBias, ScalePoint, Simplex, Value, Worley};
-use noise::utils::{NoiseMapBuilder, PlaneMapBuilder};
-
-
-
-use std::cmp;
-use std::time::Instant;
+use noise::{Constant, Displace, NoiseFn, ScalePoint};
+use std::collections::HashMap;
+use std::mem;
 use noise::*;
 use rand::prelude::*;
-use image::{Rgb, RgbImage};
 use rand::distributions::Uniform;
 use rand::seq::SliceRandom;
-
+use robotics_lib::utils::LibError;
+use robotics_lib::world::environmental_conditions::{EnvironmentalConditions, WeatherType};
 use crate::pathfinding::a_star::*;
-use crate::tile::*;
+use crate::utils::tile::*;
 use crate::zones::zones::Zones;
-use robotics_lib::world::tile::Content;
-use crate::content_distributions::ContentDist;
+use robotics_lib::world::tile::{Content, Tile, TileType};
+use robotics_lib::world::world_generator::{Generator, World};
+use crate::customization::noise_to_tile::NoiseDist;
+use crate::customization::noise_to_tile::NoiseBundle;
+use crate::world_builder::WorldBuilder;
 
+impl PreWorld{
+    pub fn gen_world_from_builder(builder:WorldBuilder)->Result<PreWorld,LibError>   {
+        let (size,
+            elevation_factor,
+            noise_function,
+            content_distribution,
+            noise_to_tile,
+            city_content_distribution,
+            environmental_conditions,
+            max_score,
+            score_table) = builder.to_tuple();
 
-pub fn gen_world(width: usize, height: usize) -> PreWorld {
-    let seed = rand::random::<u32>() ;
-    let perlin = Perlin::new(seed);
-    let scale = 4.2; // TODO adjust automatically based on map size.
-    // scale rappresent zoom factor of the map,
-    // higher the scale lower the zoom factor.
+        let (mut world, mut elevation_vec) = noise_function.generate_tiles_and_elevation(size,noise_to_tile,elevation_factor);
 
-    let octaves = 3; // Number of octaves added to the Perlin Noise
-    // to obtain a better looking map.
-
-    let mut world = Vec::with_capacity(width);
-    for x in 0..width {
-        let nx = x as f64 / width as f64;
-        let mut row = Vec::with_capacity(height);
-        for y in 0..height {
-            let ny = y as f64 / height as f64;
-            let mut elevation = perlin.get([nx * scale, ny * scale]);
-            for j in 1..octaves {
-                elevation += (1.0 / j as f64) * perlin.get(
-                    [nx * scale * 2.0_f64.powi(j), ny * scale * 2.0_f64.powi(j)]);
+        let zones = Zones::get_zones(&mut world);
+        let mut world:Vec<Vec<TileType>>  = world.iter().map(|vec| vec.iter().map(|t|->TileType {t.to_tiletype()}).collect()).collect();
+        let mut content_vec = Vec::<Vec<Content>>::with_capacity(size);
+        let mut range_generator = Uniform::new(0,100);
+        for i in 0..size{
+            content_vec.push(Vec::with_capacity(size));
+            for j in 0..size{
+                content_vec[i].push(content_distribution.get_content(world[i][j],range_generator.sample(&mut rand::thread_rng())));
             }
-            elevation /= 1.875; // TODO adjust automatically after the octaves number.
-            row.push(trans(elevation)); // TO refactor
         }
-        world.push(row);
-    }
-
-    // Rest In Peace beatiful line of code ->
-    // world.iter().map(|col| col.iter().map(|tile_prob| Tile {rtype: trans(*tile_prob)}).collect()).collect()
-
-    /*
-    let mut zones = Vec::<(Tile, Vec<(usize, usize)>)>::new();
-    for x in 0..world.len() {
-        for y in 0..world[0].len() {
-            match world[x][y] {
-                Tile::Zone(i) => {
-                    zones.push((Tile::Zone(i), bfs(&mut world, i, (x, y))));
-                },
-                _ => {},
-            };
-        }
-    }
-    while zones.len() > 0 {
-        let mut rng = thread_rng();
-        let zone = zones.pop().unwrap();
-        match zone.0 {
-            Tile::Zone(0) => {
-                let options = [Tile::Sand, Tile::Grass];
-                let tile = *options.choose(&mut rng).unwrap();
-                for (a, b) in zone.1 {
-                    world[a][b] = tile;
-                }
-            }
-            _ => {}
+        zones.fill_cities_with_content(&mut world, &mut content_vec,&city_content_distribution);
+        let world = to_tiles_vec(world,content_vec,elevation_vec)?;
+        let pre_world = PreWorld{
+            size:size,
+            tiles:world,
+            environmental_conditions,
+            max_score,
+            score_table
         };
+        Ok(pre_world)
 
     }
-    */
-    /*
-    let mut zones = Vec::<Zone>::new();
-    for x in 0..world.len(){
-        for y in 0..world[0].len(){
-            match world[x][y]{
 
-                Tile::Zone(i) => {
-                    zones.push(Zone::bfs(&mut world,i,Point::new(x,y)))
-                },
-                _ => {}
-            }
-        }
+    pub fn save_to_file(){
+        todo!()
     }
-    for i in zones.iter_mut(){
-        let mut rng = thread_rng();
-        let tile = *[Tile::Sand, Tile::Grass].choose(&mut rng).unwrap();
-        i.fill(&mut world,tile);
+    pub fn build_from_file(){
+        todo!()
     }
-    */
-    /*
-    //pathfinding test
-    let start = Instant::now();
-    let road = shortest_priority(&world, Point::new(20,20),Point::new(1000,1000));
-    match road {
-        Ok(path) => { for i in path {
-            world[i.x][i.y] = Tile::Road
-        }}
-        Err(s) => {println!("{}",s)}
-    }
-    let duration = start.elapsed();
-    println!("{:?}",duration);
-    */
-    let zones = Zones::get_zones(&mut world);
-    let content_distribution: ContentDist = ContentDist::default();
-    let mut content_vec = Vec::<Vec<Content>>::with_capacity(width);
-    let mut range_generator = Uniform::new(0,100);
-    for i in 0..width{
-        content_vec.push(Vec::with_capacity(height));
-        for j in 0..height{
-            content_vec[i].push(content_distribution.get_content(world[i][j],range_generator.sample(&mut rand::thread_rng())))
-        }
-    }
-    PreWorld{
-        size: Point::new(width,height),
+}
 
-        tiles: world,
-        contents: content_vec,
-        elevation: vec![],
+pub fn default_weather_conditions(starting_hour:u8, time_progression:u8, number:usize) ->Result<EnvironmentalConditions,LibError>{
+    let weather_vec = vec![WeatherType::Sunny,WeatherType::Rainy,WeatherType::Foggy,WeatherType::TrentinoSnow,WeatherType::TropicalMonsoon];
+    let mut weather_cycle:Vec<WeatherType> = Vec::new();
+    for i in 0..number{
+        weather_cycle.push(weather_vec.choose(&mut thread_rng()).unwrap().clone());
+
     }
-
-
+    EnvironmentalConditions::new(weather_cycle.as_slice(),starting_hour,time_progression)
 }
 
 
@@ -134,10 +76,20 @@ pub fn gen_world(width: usize, height: usize) -> PreWorld {
 
 
 
-
-fn displace<Source,T>(func: Source,x:f64,y:f64 )-> Displace<Source,Constant,Constant,Constant,Constant> where Source : NoiseFn<T, 2> {
-    Displace::new( func, Constant::new(x),Constant::new(y), Constant::new(0.0), Constant::new(0.0))
+pub struct PreWorld{
+    pub size: usize,
+    pub tiles: Vec<Vec<Tile>>,
+    pub environmental_conditions:EnvironmentalConditions,
+    pub max_score:f32,
+    pub score_table:Option<HashMap<Content,f32>>
 }
-fn scale<Source,T>(func: Source,x:f64,y:f64)-> ScalePoint<Source> where Source:NoiseFn<T, 2>{
-    ScalePoint::new(func).set_x_scale(x).set_y_scale(y)
+
+impl Generator for PreWorld{
+    fn gen(&mut self)->World {
+        let tiles = mem::take(&mut self.tiles);
+        let score_table = mem::take(&mut self.score_table);
+
+        return (tiles,(self.size,self.size),self.environmental_conditions.clone(),self.max_score,score_table);
+
+    }
 }
