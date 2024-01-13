@@ -1,22 +1,23 @@
 use image::{Rgb, RgbImage};
 use robotics_lib::world::tile::{Content, Tile, TileType};
 use crate::world_gen::PreWorld;
+impl PreWorld {
+    pub fn export_to_image(&self, filename: &str)->Result<(),()> {
+        let (width, height) = (self.size, self.size);
 
-pub fn export_to_image(map: &PreWorld, filename: &str) {
-    let (width,height) = (map.size,map.size);
 
+        let mut image = RgbImage::new(width as u32, height as u32);
 
-    let mut image = RgbImage::new(width as u32, height as u32);
-
-    for x in 0..width {
-        for y in 0..height {
-            let tile_color = color_for_tile(&map.tiles[x][y]);
-            image.put_pixel(x as u32, y as u32, tile_color);
+        for x in 0..width {
+            for y in 0..height {
+                let tile_color = color_for_tile(&self.tiles[x][y]);
+                image.put_pixel(x as u32, y as u32, tile_color);
+            }
         }
-    }
 
-    // Save the image to a file
-    image.save(filename).expect("Failed to save image");
+        // Save the image to a file
+        image.save(filename)
+    }
 }
 fn color_for_content(content:&Content)-> Option<Rgb<u8>>{
     match content{

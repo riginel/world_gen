@@ -12,6 +12,7 @@ use crate::utils::tile::*;
 use crate::zones::zones::Zones;
 use robotics_lib::world::tile::{Content, Tile, TileType};
 use robotics_lib::world::world_generator::{Generator, World};
+use serde::{Deserialize, Serialize};
 use crate::customization::noise_to_tile::NoiseDist;
 use crate::customization::noise_to_tile::NoiseBundle;
 use crate::world_builder::WorldBuilder;
@@ -75,7 +76,7 @@ pub fn default_weather_conditions(starting_hour:u8, time_progression:u8, number:
 
 
 
-
+#[derive(Serialize,Deserialize)]
 pub struct PreWorld{
     pub size: usize,
     pub tiles: Vec<Vec<Tile>>,
