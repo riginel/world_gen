@@ -1,11 +1,11 @@
 use crate::utils::generator_error::GeneratorError;
-use crate::utils::tile::PreTileType;
+
 use robotics_lib::world::tile::Content;
 use robotics_lib::world::tile::TileType;
 use robotics_lib::world::tile::TileType::Teleport;
-use robotics_lib::world::world_generator;
+
 use std::collections::HashMap;
-use std::ops::{Range, RangeBounds};
+use std::ops::{Range};
 
 pub struct ContentDist {
     distribution: HashMap<TileType, Vec<(Range<usize>, Content)>>,
@@ -43,7 +43,7 @@ impl ContentDist {
         };
         //check if ranges overlap and do not cover from 0 to 100
         for (tile, map) in self.distribution.iter() {
-            if map.len() == 0 {
+            if map.is_empty() {
                 return Err(GeneratorError::NonExhaustiveContentDistribution);
             };
             let mut covering_range: Range<usize> = 0..0;
@@ -51,7 +51,8 @@ impl ContentDist {
             for (range, content) in map.iter() {
                 //check if tile can hold
                 if !tile_properties.can_hold(content) {
-                    return Err(GeneratorError::InvalidContent(tile.clone(),content.clone()));
+                    return Err(GeneratorError::InvalidContent(*tile,content.clone()));
+
                 }
                 if covering_range.start == covering_range.end {
                     covering_range = range.clone();
@@ -200,7 +201,7 @@ impl CityContentDist{
         Content::None
     }
 }
-fn test() {}
+
 #[cfg(test)]
 mod tests {
     use super::*;

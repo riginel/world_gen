@@ -1,7 +1,7 @@
 
 use std::ops::Range;
 use noise::{NoiseFn, Perlin};
-use crate::utils::generator_error::GeneratorError;
+
 use crate::utils::tile::PreTileType;
 
 pub struct NoiseDist{

@@ -1,5 +1,6 @@
 use robotics_lib::utils::LibError;
 use robotics_lib::world::tile::{Content, Tile, TileType};
+use crate::pathfinding::a_star::Walkable;
 
 #[derive(Debug, Copy, Clone,PartialEq,Eq,Hash)]
 pub enum PreTileType {
@@ -51,4 +52,18 @@ pub fn to_tiles_vec(tiletypes:Vec<Vec<TileType>>,contents:Vec<Vec<Content>>,elev
         tile_vec.push(row)
     }
     Ok(tile_vec)
+}
+impl Walkable for PreTileType {
+    fn cost(&self) -> u32 {
+        match self{
+            PreTileType::Grass => {1}
+            PreTileType::Water => {3}
+            PreTileType::DeepWater => {10}
+            PreTileType::Sand => {1}
+            PreTileType::Mountain => {500}
+            PreTileType::Lava => {100000}
+            PreTileType::Road => {0}
+            _ => {1}
+        }
+    }
 }

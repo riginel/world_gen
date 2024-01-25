@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use noise::{NoiseFn, Perlin};
+
 use robotics_lib::utils::LibError;
 use robotics_lib::world::environmental_conditions::EnvironmentalConditions;
 use robotics_lib::world::tile::Content;

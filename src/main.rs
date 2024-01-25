@@ -1,25 +1,24 @@
 use robotics_lib::world::world_generator::Generator;
-use crate::export::image_export::export_to_image;
 
-use crate::image_export::image_export::export_to_image;
+
 use crate::world_builder::WorldBuilder;
 
-mod world_gen;
-
+pub mod world_gen;
 mod pathfinding;
-mod zones;
-mod customization;
-mod world_builder;
-mod utils;
-mod export;
+pub mod zones;
+pub mod customization;
+pub mod world_builder;
+pub mod utils;
+pub mod export;
 
 fn main() {
 
-    let mut world= WorldBuilder::new().build();
+    let  world= WorldBuilder::new().build();
     println!("ciaoo");
     match world{
-        Ok(mut preWorld) => {export_to_image(&preWorld,"map.png");
-            preWorld.gen();}
+        Ok(mut pre_world) => {
+            pre_world.export_to_image("map.png").expect("AOOO");
+            pre_world.gen();}
         Err(e) => {println!("{:?}",e);}
     };
 

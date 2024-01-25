@@ -3,7 +3,7 @@ use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use robotics_lib::world::tile::{Content, TileType};
 use crate::customization::content_distribution::CityContentDist;
-use crate::pathfinding::a_star::{build_road, shortest_priority};
+use crate::pathfinding::a_star::{build_road, shortest_path};
 use crate::utils::tile::PreTileType;
 use crate::utils::vector2::Vector2;
 
@@ -30,7 +30,7 @@ impl Zone{
                 _=>{}
             }
         }
-        let mut  centroid = Self::compute_centroid(&vec);
+        let   centroid = Self::compute_centroid(&vec);
         Zone {
             tile: PreTileType::None,
             inner: vec,
@@ -41,7 +41,7 @@ impl Zone{
         if points.len()== 0{
             println!("error!!")
         }
-        let mut  centroid : Vector2 = points.iter().fold(Vector2::new(0, 0), |acc, p| acc + *p);
+        let  centroid : Vector2 = points.iter().fold(Vector2::new(0, 0), |acc, p| acc + *p);
         Vector2::new(centroid.x / points.len(), centroid.y / points.len())
     }
 
@@ -88,11 +88,11 @@ impl Zones {
         }
         //convert some mountains in cities
         zones.mountains.shuffle(&mut rand::thread_rng());
-        for i in 0..(zones.mountains.len()*2)/3{
+        for _ in 0..(zones.mountains.len()*2)/3{
             zones.cities.push(zones.mountains.pop().unwrap().to_city());
         }
         //convert some cities in hills
-        for i in 0..zones.cities.len()/2{
+        for _ in 0..zones.cities.len()/2{
             zones.hills.push(zones.cities.pop().unwrap());
         }
 
@@ -166,7 +166,7 @@ impl Zones {
                 }
             }
             self.cities.swap(i+1, min_index);
-            let path = shortest_priority(world,self.cities[i].centroid, self.cities[i+1].centroid);
+            let path = shortest_path(world, self.cities[i].centroid, self.cities[i+1].centroid);
             if let Ok(path ) = path{
                 build_road(world,path);
             }
@@ -174,7 +174,7 @@ impl Zones {
     }
     pub fn fill_cities_with_content(&self ,world: &mut Vec<Vec<TileType>>,content_vec:&mut Vec<Vec<Content>>,city_content_dist:&CityContentDist){
         let mut rng = thread_rng();
-        let mut range_generator = Uniform::new(0,100);
+        let  range_generator = Uniform::new(0,100);
 
         for i in self.cities.iter(){
             for point in i.inner.iter(){

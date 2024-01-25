@@ -7,4 +7,7 @@ pub enum GeneratorError{
     NonExhaustiveContentDistribution,
     OverlappingDistribution,
     ActiveTeleport,
+    ImageExportError(String),
+    FileExportError(String),
+    FileImportError(String)
 }

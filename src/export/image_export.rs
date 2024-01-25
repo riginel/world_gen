@@ -1,8 +1,9 @@
 use image::{Rgb, RgbImage};
 use robotics_lib::world::tile::{Content, Tile, TileType};
+use crate::utils::generator_error::GeneratorError;
 use crate::world_gen::PreWorld;
 impl PreWorld {
-    pub fn export_to_image(&self, filename: &str)->Result<(),()> {
+    pub fn export_to_image(&self, filename: &str)->Result<(),GeneratorError> {
         let (width, height) = (self.size, self.size);
 
 
@@ -16,7 +17,10 @@ impl PreWorld {
         }
 
         // Save the image to a file
-        image.save(filename)
+        match image.save(filename){
+            Ok(_) => {Ok(())}
+            Err(_) => {Err(GeneratorError::ImageExportError("Couldn't save image".into()))}
+        }
     }
 }
 fn color_for_content(content:&Content)-> Option<Rgb<u8>>{
@@ -40,7 +44,7 @@ fn color_for_content(content:&Content)-> Option<Rgb<u8>>{
     }
 }
 
-pub fn color_for_tiletype(tile: &TileType) -> Rgb<u8> {
+fn color_for_tiletype(tile: &TileType) -> Rgb<u8> {
     // TODO Adjust colors
     match tile {
         TileType::DeepWater => Rgb([0,0,125]),
@@ -55,7 +59,7 @@ pub fn color_for_tiletype(tile: &TileType) -> Rgb<u8> {
         _ => Rgb([0,0,0]),
     }
 }
-pub fn color_for_tile(tile:&Tile)->Rgb<u8>{
+fn color_for_tile(tile:&Tile)->Rgb<u8>{
     let tiletype_color = color_for_tiletype(&tile.tile_type);
     let content_color = color_for_content(&tile.content);
     match content_color{

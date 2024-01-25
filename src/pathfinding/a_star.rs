@@ -1,13 +1,13 @@
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashSet;
-use std::hash::Hash;
+
 use priority_queue::PriorityQueue;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use crate::utils::tile::PreTileType;
 use crate::utils::vector2::Vector2;
 
-pub trait Walkable {
+pub(crate) trait Walkable {
     fn cost(&self) -> u32;
 }
 
@@ -32,7 +32,7 @@ impl Node {
             parent:None,
             g,
             h,
-            weight: weight
+            weight
         }
     }
     //function used to initialize a node to a default value
@@ -80,81 +80,17 @@ impl PartialOrd for Node {
     }
 }
 
-//function that finds shortest path using a_star
+
 pub fn shortest_path<T>(map: &Vec<Vec<T>>, start: Vector2, end: Vector2) -> Result<Vec<Vector2>, String>
-where
-    T: Walkable,
-{
-    //check if path gets out of bounds
-    if map.len() == 0 || map[0].len()==0 {
-        return Err("Invalid Map".to_string())
-    }
-    let (width,height) = (map.len(),map[0].len());
-    if !(0 <= start.x && start.x < width && 0 <=start.y && start.y < height){
-        return Err("Out of bounds".to_string());
-    }
-    //initializes the node map with the coordinates and default values
-    let mut node_map: Vec<Vec<Node>> = map.iter().enumerate().map(|(col,v)|
-        v.iter().enumerate().map(|(row,w)| Node::init(Vector2::new(col, row), w.cost(), end)  ).collect()).collect();
-    node_map[start.x][start.y] = Node::new(start,0,0,0);
-
-    //the frontier of the pathfinding algorithm
-    let mut open_list = HashSet::<Vector2>::new();
-    //nodes already verified
-    let mut closed_list = HashSet::<Vector2>::new();
-    //add start to open list
-    open_list.insert(start);
-
-    loop{
-        //gets point with smallest f_cost
-        let current = take_min(&mut open_list,&node_map);
-        closed_list.insert(current);
-        if current == end{
-            break;
-        }
-
-        for i in neighbours(current,width,height).iter(){
-            if closed_list.contains(i) {
-                continue;
-            }
-            if !open_list.contains(i) || node_map[i.x][i.y].g_cost() >node_map[start.x][start.y].g_cost() + node_map[i.x][i.y].weight {
-                let parent_cost = node_map[start.x][start.y].g_cost();
-
-                node_map[i.x][i.y].connect(current,parent_cost);
-
-                open_list.insert(i.clone());
-
-
-            }
-
-
-        }
-    }
-
-    let mut path: Vec<Vector2> = Vec::new();
-    let mut current = end;
-    while current != start {
-        path.push(current);
-        if let Some(p) = node_map[current.x][current.y].parent{
-            current = p;
-        }else {
-            return Err("Invalid Path :(".to_string());
-        }
-    }
-    println!("cost sum : {}", path.iter().fold(0,|x,p| x+node_map[p.x][p.y].f_cost()));
-
-    Ok(path)
-}
-pub fn shortest_priority<T>(map: &Vec<Vec<T>>, start: Vector2, end: Vector2) -> Result<Vec<Vector2>, String>
     where
         T: Walkable,
 {
     //check if path gets out of bounds
-    if map.len() == 0 || map[0].len()==0 {
+    if map.is_empty()|| map[0].is_empty() {
         return Err("Invalid Map".to_string())
     }
     let (width,height) = (map.len(),map[0].len());
-    if !(0 <= start.x && start.x < width && 0 <=start.y && start.y < height){
+    if !( start.x < width &&  start.y < height){
         return Err("Out of bounds".to_string());
     }
     //initializes the node map with the coordinates and default values
@@ -187,7 +123,7 @@ pub fn shortest_priority<T>(map: &Vec<Vec<T>>, start: Vector2, end: Vector2) -> 
 
                 node_map[i.x][i.y].connect(current,parent_cost);
 
-                open_list.add(i.clone(),&node_map);
+                open_list.add(*i,&node_map);
 
 
             }
@@ -210,12 +146,7 @@ pub fn shortest_priority<T>(map: &Vec<Vec<T>>, start: Vector2, end: Vector2) -> 
     Ok(path)
 
 }
-//refactorare un sacco, togliere sti unwrap
-fn take_min(map: &mut HashSet<Vector2>, node_map: &Vec<Vec<Node>>) -> Vector2 {
-    let min = map.iter().min_by(|a,b| node_map[a.x][a.y].partial_cmp(&node_map[b.x][b.y]).unwrap()).unwrap().clone();
-    map.remove(&min);
-    min
-}
+
 pub fn build_road(world:&mut Vec<Vec<PreTileType>>, path: Vec<Vector2>){
     for i in path {
         world[i.x][i.y] = PreTileType::Road;
@@ -257,7 +188,7 @@ impl OpenList{
         }
     }
     fn min(&mut self) -> Vector2 {
-        self.pq.pop().map(|(a,b)| a).unwrap()
+        self.pq.pop().map(|(a,_)| a).unwrap()
     }
     fn add(&mut self, item: Vector2, map: &Vec<Vec<Node>>){
         if self.contains(&item){
@@ -272,17 +203,3 @@ impl OpenList{
 }
 
 
-impl Walkable for PreTileType {
-    fn cost(&self) -> u32 {
-        match self{
-            PreTileType::Grass => {1}
-            PreTileType::Water => {3}
-            PreTileType::DeepWater => {10}
-            PreTileType::Sand => {1}
-            PreTileType::Mountain => {500}
-            PreTileType::Lava => {100000}
-            PreTileType::Road => {0}
-            _ => {1}
-        }
-    }
-}
