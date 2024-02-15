@@ -1,0 +1,41 @@
+[package]
+edition = "2021"
+name = "rustafariani_world_gen"
+version = "0.1.1"
+authors = [
+    "Andrei Riginel Ungureanu",
+    "Vasile Donmovil",
+]
+publish = ["kellnr"]
+
+[dependencies.clippy]
+version = "0.0.302"
+
+[dependencies.image]
+version = "0.24.0"
+
+[dependencies.noise]
+version = "0.8.2"
+features = ["images"]
+
+[dependencies.priority-queue]
+version = "1.3.2"
+
+[dependencies.rand]
+version = "0.8.5"
+
+[dependencies.robotics_lib]
+version = "0.1.8"
+registry-index = "sparse+https://advancedprogramming.disi.unitn.it/api/v1/crates/"
+
+[dependencies.serde]
+version = "1.0.195"
+
+[dependencies.serde_json]
+version = "1.0.102"
+
+[dependencies.threadpool]
+version = "1.8.1"
+
+[dependencies.threadpool_scope]
+version = "0.1.0"
