@@ -22,6 +22,7 @@ pub struct WorldGenerator {
     /// The streets will connect every homogeneous zone EXCEPT 
     /// for the ones in not_spawnable
     not_spawnable: Vec::<TileType>,
+    weather_conditions: EnvironmentalConditions
 }
 
 impl Default for WorldGenerator {
@@ -33,6 +34,7 @@ impl Default for WorldGenerator {
             score_table: None, 
             max_score: 420.0, 
             not_spawnable: [TileType::Lava, TileType::DeepWater].to_vec(),
+            weather_conditions:WorldGenerator::default_weather_conditions(5,10,25)
         }
     }
 }
@@ -80,6 +82,10 @@ impl  WorldGenerator {
 
     pub fn set_notspawnable(mut self, notspawnable: Vec::<TileType>) -> Self {
         self.not_spawnable = notspawnable;
+        self
+    }
+    pub fn set_weather_conditions(mut self, conditions: EnvironmentalConditions)-> Self{
+        self.weather_conditions= conditions;
         self
     }
 }
@@ -158,7 +164,7 @@ impl WorldGenerator {
         }
 
         // Return "The World"
-        (map, (0,0), self.default_weather_conditions( 5, 10, 25), self.max_score, self.score_table.clone())
+        (map, (0,0), self.weather_conditions.clone(), self.max_score, self.score_table.clone())
 
     }
 
@@ -234,7 +240,7 @@ impl WorldGenerator {
 
 
     // Generate standard "weather forecast", not based on any real world dynamic.
-    fn default_weather_conditions(&self, starting_hour:u8, time_progression:u8, number:usize) -> EnvironmentalConditions{
+    fn default_weather_conditions( starting_hour:u8, time_progression:u8, number:usize) -> EnvironmentalConditions{
         let weather_vec = [WeatherType::Sunny,WeatherType::Rainy,WeatherType::Foggy,WeatherType::TrentinoSnow,WeatherType::TropicalMonsoon];
         let mut weather_cycle:Vec<WeatherType> = Vec::new();
         for _ in 0..number{

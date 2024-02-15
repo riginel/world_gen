@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "rustafariani_world_gen"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clippy",
  "image 0.24.8",
