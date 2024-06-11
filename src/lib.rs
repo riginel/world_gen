@@ -26,9 +26,9 @@ fn test(){
 
 
     let world = generator.gen();
-    export_to_image("mappamondo.png", &world.0);
-    export_to_file(&world, "mappamondo".to_string());
+    assert!(export_to_image("mappamondo.png", &world.0).is_ok());
+    assert!(export_to_file(&world, "mappamondo".to_string()).is_ok());
     let imported_world = import_from_file("mappamondo".to_string()).unwrap();
-    export_to_image("mappamondo.png", &imported_world.0);
+    assert!(export_to_image("mappamondo.png", &imported_world.0).is_ok());
     //println!("{:?}", world.0);
 }

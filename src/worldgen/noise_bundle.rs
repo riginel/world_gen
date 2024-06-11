@@ -188,16 +188,18 @@ impl ContentDist {
     pub fn is_valid(&self) -> Result<(), GeneratorError> {
         //check if the map contains all possible tiletypes
         if self.dist.len() != 11 {
+            println!("Map doesn't contain all tiletypes");
             return Err(GeneratorError::NonExhaustiveContentDistribution);
         };
         //check if there's an activated teleport
         if self.dist.contains_key(&TileType::Teleport(true)) {
+
             return Err(GeneratorError::ActiveTeleport);
         };
         //check if ranges overlap and do not cover from 0 to 100
         for (tile, map) in self.dist.iter() {
             if map.is_empty() {
-
+                println!("Map is empty");
                 return Err(GeneratorError::NonExhaustiveContentDistribution);
             };
             let mut covering_range: Range<usize> = 0..0;
@@ -220,8 +222,8 @@ impl ContentDist {
 
                 covering_range = covering_range.start..range.end
             }
-            if !(covering_range.start == 0 && covering_range.end == 100) {
-
+            if !(covering_range.start == 0 && covering_range.end == 101) {
+                println!("covering range is: {:?}",covering_range);
                 return Err(GeneratorError::NonExhaustiveContentDistribution);
             };
         }
