@@ -4,6 +4,7 @@ use robotics_lib::world::tile::{Content, TileType};
 pub enum GeneratorError{
     InvalidWorldSize,
     InvalidContent(TileType,Content),
+    MaxContent(Content),
     NonExhaustiveContentDistribution,
     OverlappingDistribution,
     ActiveTeleport,

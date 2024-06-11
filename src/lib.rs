@@ -24,6 +24,7 @@ fn test(){
         .set_max_score(420.0)
         .set_noise_bundle(noise_bundle);
 
+
     let world = generator.gen();
     export_to_image("mappamondo.png", &world.0);
     export_to_file(&world, "mappamondo".to_string());

@@ -96,9 +96,12 @@ impl  NoiseBundle {
         self
     }
 
-    pub fn set_content_distribution(mut self, content_distribution: ContentDist)-> Self {
-        self.content_distribution = content_distribution;
-        self
+    pub fn set_content_distribution(mut self, content_distribution: ContentDist)-> Result<Self,GeneratorError> {
+        match content_distribution.is_valid(){
+            Ok(_) => {self.content_distribution = content_distribution; Ok(self)}
+            Err(e) => {return Err(e)}
+        }
+
     }
 
 
@@ -158,7 +161,7 @@ impl NoiseBundle {
 }
 
 pub struct ContentDist{
-    dist: HashMap<TileType,Vec<(Range<usize>,Content)>>
+    pub(crate)dist: HashMap<TileType,Vec<(Range<usize>,Content)>>
 }
 
 impl ContentDist {
@@ -194,6 +197,7 @@ impl ContentDist {
         //check if ranges overlap and do not cover from 0 to 100
         for (tile, map) in self.dist.iter() {
             if map.is_empty() {
+
                 return Err(GeneratorError::NonExhaustiveContentDistribution);
             };
             let mut covering_range: Range<usize> = 0..0;
@@ -217,6 +221,7 @@ impl ContentDist {
                 covering_range = covering_range.start..range.end
             }
             if !(covering_range.start == 0 && covering_range.end == 100) {
+
                 return Err(GeneratorError::NonExhaustiveContentDistribution);
             };
         }
@@ -240,7 +245,7 @@ impl Default for ContentDist {
                     (85..90, Content::Rock(2)),
                     (90..92, Content::Bank(0..100)),
                     (92..95, Content::Crate(0..5)),
-                    (95..100, Content::Building),
+                    (95..101, Content::Building),
                 ],
             ),
             (
@@ -250,17 +255,17 @@ impl Default for ContentDist {
                     (60..80, Content::Rock(4)),
                     (80..85, Content::Coin(5)),
                     (85..90, Content::Crate(0..5)),
-                    (90..100,Content::Tree(1))
+                    (90..101,Content::Tree(1))
                 ],
             ),
             (
                 TileType::ShallowWater,
-                vec![(0..90, Content::Water(5)), (90..300, Content::Fish(2))],
+                vec![(0..90, Content::Water(5)), (90..101, Content::Fish(2))],
             ),
-            (TileType::Lava, vec![(0..100, Content::None)]),
+            (TileType::Lava, vec![(0..101, Content::None)]),
             (
                 TileType::DeepWater,
-                vec![(0..90, Content::Water(10)), (90..100, Content::Fish(10))],
+                vec![(0..90, Content::Water(10)), (90..101, Content::Fish(10))],
             ),
             (
                 TileType::Hill,
@@ -271,7 +276,7 @@ impl Default for ContentDist {
                     (70..80,Content::Bin(0..5)),
                     (80..85,Content::Scarecrow),
                     (85..95, Content::Coin(10)),
-                    (95..100, Content::Crate(0..5)),
+                    (95..101, Content::Crate(0..5)),
                 ],
             ),
             (
@@ -282,7 +287,7 @@ impl Default for ContentDist {
                     (70..80, Content::Rock(1)),
                     (80..90, Content::Garbage(2)),
                     (90..95, Content::Bin(0..10)),
-                    (95..100, Content::Scarecrow),
+                    (95..101, Content::Scarecrow),
                 ],
             ),
             (
@@ -291,7 +296,7 @@ impl Default for ContentDist {
                     (0..80, Content::None),
                     (80..85, Content::Coin(2)),
                     (85..90, Content::Garbage(1)),
-                    (90..100, Content::Rock(1)),
+                    (90..101, Content::Rock(1)),
                 ],
             ),
             (
@@ -299,15 +304,15 @@ impl Default for ContentDist {
                 vec![
                     (0..90, Content::None),
                     (90..95, Content::Coin(1)),
-                    (95..100, Content::Rock(3)),
+                    (95..101, Content::Rock(3)),
 
                 ],
             ),
             (TileType::Wall,
-             vec![(0..100, Content::None)]
+             vec![(0..101, Content::None)]
             ),
             (TileType::Teleport(false),
-             vec![(0..100, Content::None)]
+             vec![(0..101, Content::None)]
             )
         ]);
         Self { dist: map }
